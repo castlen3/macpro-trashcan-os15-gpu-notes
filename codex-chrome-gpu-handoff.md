@@ -218,6 +218,45 @@ sample "$(pgrep -f '/Applications/Codex.app/Contents/MacOS/Codex' | head -1)" 5 
 
 Then show `/tmp/codex-desktop-sample.txt`.
 
+## Persistent Fix (2026-06-28)
+
+Three layers to make the GPU workaround survive reboots and updates:
+
+### 1. Wrapper Script
+
+`~/.local/bin/codex` — one command to fix everything and launch:
+
+```bash
+codex
+```
+
+This script: kills stuck processes → restores Local State + Preferences → clears GPU caches → launches with SwiftShader flags.
+
+### 2. Login LaunchAgent
+
+`~/Library/LaunchAgents/com.castlen3.codex-gpu-fix.plist` runs at every login:
+
+- Restores `hardware_acceleration_mode_enabled: false` in both `Local State` and `Default/Preferences`
+- Removes `disable_gpu` from `Local State` (dangerous for Codex; triggers GPU access error)
+- Clears all GPU caches
+- Sets `defaults write com.openai.codex HardwareAccelerationModeEnabled -bool false`
+- Deletes `defaults com.openai.codex DisableGpu`
+
+Log: `~/.local/share/codex-gpu-fix.log`
+
+### 3. Dock .app Wrapper
+
+`/Applications/Codex Safe.app` — AppleScript wrapper that calls `~/.local/bin/codex`. Has the same icon as Codex. Drag this to the Dock and use it instead of the original Codex icon.
+
+### If Codex Still Won't Open
+
+```bash
+# Terminal one-liner
+~/.local/bin/codex
+
+# Or from Spotlight: type "Codex Safe" and launch the wrapper app
+```
+
 ## Notes For Future Debugging
 
 - Chrome can use full `--disable-gpu`.
